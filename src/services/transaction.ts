@@ -22,7 +22,7 @@ export const transactionService = {
       const transactionRef = doc(collection(db, 'transactions'));
       const now = Timestamp.now();
 
-      const transactionData = {
+      const transactionData: any = {
         userId,
         portfolioId: input.portfolioId,
         type: input.type,
@@ -33,12 +33,22 @@ export const transactionService = {
         updatedAt: now,
       };
 
+      // Add mutual fund details if provided
+      if (input.mutualFundDetails) {
+        transactionData.mutualFundDetails = input.mutualFundDetails;
+      }
+
       await setDoc(transactionRef, transactionData);
 
       const transaction: Transaction = {
         id: transactionRef.id,
-        ...transactionData,
+        userId,
+        portfolioId: input.portfolioId,
+        type: input.type,
+        amount: input.amount,
         date: input.date,
+        notes: input.notes,
+        mutualFundDetails: input.mutualFundDetails,
         createdAt: now.toDate(),
         updatedAt: now.toDate(),
       };
@@ -76,6 +86,7 @@ export const transactionService = {
           amount: data.amount,
           date: data.date?.toDate(),
           notes: data.notes,
+          mutualFundDetails: data.mutualFundDetails,
           createdAt: data.createdAt?.toDate(),
           updatedAt: data.updatedAt?.toDate(),
         });
@@ -111,6 +122,7 @@ export const transactionService = {
           amount: data.amount,
           date: data.date?.toDate(),
           notes: data.notes,
+          mutualFundDetails: data.mutualFundDetails,
           createdAt: data.createdAt?.toDate(),
           updatedAt: data.updatedAt?.toDate(),
         });
@@ -142,6 +154,7 @@ export const transactionService = {
         amount: data.amount,
         date: data.date?.toDate(),
         notes: data.notes,
+        mutualFundDetails: data.mutualFundDetails,
         createdAt: data.createdAt?.toDate(),
         updatedAt: data.updatedAt?.toDate(),
       };

@@ -70,6 +70,11 @@ export function TransactionList({ transactions, onDelete, deletingId }: Transact
                   transaction.type === 'deposit' ? 'text-green-700' : 'text-red-700'
                 }`}>
                   {transaction.type === 'deposit' ? 'Deposit' : 'Withdrawal'}
+                  {transaction.mutualFundDetails && (
+                    <span className="ml-2 text-xs font-normal text-gray-600">
+                      #{transaction.mutualFundDetails.installmentNo}
+                    </span>
+                  )}
                 </p>
                 <p className={`text-base font-bold ${
                   transaction.type === 'deposit' ? 'text-green-700' : 'text-red-700'
@@ -77,11 +82,24 @@ export function TransactionList({ transactions, onDelete, deletingId }: Transact
                   {transaction.type === 'deposit' ? '+' : '-'}{formatCurrency(transaction.amount)}
                 </p>
               </div>
+              
+              {/* Mutual Fund Details */}
+              {transaction.mutualFundDetails && (
+                <div className="mt-1">
+                  <p className="text-xs font-medium text-gray-700">
+                    {transaction.mutualFundDetails.fundName}
+                  </p>
+                  <p className="text-xs text-gray-500">
+                    {transaction.mutualFundDetails.unitsPurchased.toFixed(4)} units × ฿{transaction.mutualFundDetails.pricePerUnit.toFixed(4)}
+                  </p>
+                </div>
+              )}
+              
               <div className="flex items-center justify-between mt-1">
                 <p className="text-xs text-gray-500">
                   {formatDate(transaction.date)}
                 </p>
-                {transaction.notes && (
+                {transaction.notes && !transaction.mutualFundDetails && (
                   <p className="text-xs text-gray-500 truncate ml-2 max-w-[150px]">
                     {transaction.notes}
                   </p>

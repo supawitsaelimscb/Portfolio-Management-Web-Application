@@ -1,5 +1,7 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import type { CreateTransactionInput, TransactionType } from '../types/transaction';
+import type { InvestmentType } from '../types/portfolio';
+import { transactionService } from '../services/transaction';
 
 interface AddTransactionModalProps {
   isOpen: boolean;
@@ -7,22 +9,61 @@ interface AddTransactionModalProps {
   onCreate: (input: CreateTransactionInput) => Promise<void>;
   portfolioId: string;
   portfolioName: string;
+  investmentType?: InvestmentType;
 }
 
-export function AddTransactionModal({ isOpen, onClose, onCreate, portfolioId, portfolioName }: AddTransactionModalProps) {
+export function AddTransactionModal({ isOpen, onClose, onCreate, portfolioId, portfolioName, investmentType }: AddTransactionModalProps) {
   const [formData, setFormData] = useState<{
     type: TransactionType;
     amount: string;
     date: string;
     notes: string;
+    fundName: string;
+    installmentNo: string;
+    unitsPurchased: string;
+    pricePerUnit: string;
   }>({
     type: 'deposit',
     amount: '',
     date: new Date().toISOString().split('T')[0],
     notes: '',
+    fundName: '',
+    installmentNo: '',
+    unitsPurchased: '',
+    pricePerUnit: '',
   });
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [existingFundNames, setExistingFundNames] = useState<string[]>([]);
+
+  // Fetch existing fund names when modal opens for mutual fund portfolios
+  useEffect(() => {
+    const fetchFundNames = async () => {
+      if (isOpen && investmentType === 'mutual_fund' && portfolioId) {
+        try {
+          const transactions = await transactionService.getPortfolioTransactions(portfolioId);
+          const uniqueFundNames = [...new Set(
+            transactions
+              .filter(t => t.mutualFundDetails?.fundName)
+              .map(t => t.mutualFundDetails!.fundName)
+          )];
+          setExistingFundNames(uniqueFundNames);
+          
+          // Auto-fill fund name if there's only one
+          if (uniqueFundNames.length === 1 && !formData.fundName) {
+            setFormData(prev => ({ ...prev, fundName: uniqueFundNames[0] }));
+          }
+
+          // Auto-calculate next installment number (total transactions + 1)
+          const nextInstallmentNo = transactions.length + 1;
+          setFormData(prev => ({ ...prev, installmentNo: nextInstallmentNo.toString() }));
+        } catch (error) {
+          console.error('Failed to fetch fund names:', error);
+        }
+      }
+    };
+    fetchFundNames();
+  }, [isOpen, investmentType, portfolioId]);
 
   const formatNumberWithCommas = (value: string): string => {
     const digits = value.replace(/\D/g, '');
@@ -40,23 +81,60 @@ export function AddTransactionModal({ isOpen, onClose, onCreate, portfolioId, po
     e.preventDefault();
     setError(null);
 
-    const amountValue = parseFloat(formData.amount.replace(/,/g, ''));
-
-    if (!amountValue || amountValue <= 0) {
-      setError('Amount must be greater than 0');
-      return;
+    // For mutual funds, calculate amount from units * price
+    let amountValue: number;
+    if (investmentType === 'mutual_fund') {
+      const units = parseFloat(formData.unitsPurchased);
+      const price = parseFloat(formData.pricePerUnit);
+      
+      if (!units || units <= 0) {
+        setError('Units purchased must be greater than 0');
+        return;
+      }
+      if (!price || price <= 0) {
+        setError('Price per unit must be greater than 0');
+        return;
+      }
+      if (!formData.fundName.trim()) {
+        setError('Fund name is required');
+        return;
+      }
+      if (!formData.installmentNo || parseInt(formData.installmentNo) <= 0) {
+        setError('Installment number must be greater than 0');
+        return;
+      }
+      
+      amountValue = units * price;
+    } else {
+      amountValue = parseFloat(formData.amount.replace(/,/g, ''));
+      if (!amountValue || amountValue <= 0) {
+        setError('Amount must be greater than 0');
+        return;
+      }
     }
 
     setIsLoading(true);
 
     try {
-      await onCreate({
+      const input: CreateTransactionInput = {
         portfolioId,
         type: formData.type,
         amount: amountValue,
         date: new Date(formData.date),
         notes: formData.notes,
-      });
+      };
+
+      // Add mutual fund details if applicable
+      if (investmentType === 'mutual_fund') {
+        input.mutualFundDetails = {
+          fundName: formData.fundName,
+          installmentNo: parseInt(formData.installmentNo),
+          unitsPurchased: parseFloat(formData.unitsPurchased),
+          pricePerUnit: parseFloat(formData.pricePerUnit),
+        };
+      }
+
+      await onCreate(input);
       
       // Reset form
       setFormData({
@@ -64,6 +142,10 @@ export function AddTransactionModal({ isOpen, onClose, onCreate, portfolioId, po
         amount: '',
         date: new Date().toISOString().split('T')[0],
         notes: '',
+        fundName: '',
+        installmentNo: '',
+        unitsPurchased: '',
+        pricePerUnit: '',
       });
       onClose();
     } catch (err: any) {
@@ -97,7 +179,14 @@ export function AddTransactionModal({ isOpen, onClose, onCreate, portfolioId, po
           <div className="flex items-center justify-between">
             <div>
               <h2 className="text-2xl font-bold text-gray-900">Add Transaction</h2>
-              <p className="text-sm text-gray-500 mt-1">{portfolioName}</p>
+              <p className="text-sm text-gray-500 mt-1">
+                {portfolioName}
+                {investmentType === 'mutual_fund' && (
+                  <span className="ml-2 px-2 py-0.5 bg-purple-100 text-purple-700 rounded text-xs font-medium">
+                    Mutual Fund
+                  </span>
+                )}
+              </p>
             </div>
             <button
               onClick={handleClose}
@@ -171,7 +260,107 @@ export function AddTransactionModal({ isOpen, onClose, onCreate, portfolioId, po
               </div>
             </div>
 
-            {/* Amount */}
+            {/* Mutual Fund Fields */}
+            {investmentType === 'mutual_fund' && (
+              <>
+                <div>
+                  <label htmlFor="fundName" className="block text-sm font-medium text-gray-700 mb-1">
+                    Fund Name *
+                  </label>
+                  <input
+                    id="fundName"
+                    type="text"
+                    required
+                    list="fundNameOptions"
+                    value={formData.fundName}
+                    onChange={(e) => setFormData({ ...formData, fundName: e.target.value })}
+                    className="w-full px-4 py-2.5 border border-gray-300 rounded-lg text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    placeholder="e.g., SCBS&P500"
+                  />
+                  <datalist id="fundNameOptions">
+                    {existingFundNames.map((name) => (
+                      <option key={name} value={name} />
+                    ))}
+                  </datalist>
+                  {existingFundNames.length > 0 && (
+                    <p className="text-xs text-gray-500 mt-1">
+                      💡 Select from dropdown or type a new fund name
+                    </p>
+                  )}
+                </div>
+
+                <div>
+                  <label htmlFor="installmentNo" className="block text-sm font-medium text-gray-700 mb-1">
+                    Installment No. *
+                  </label>
+                  <input
+                    id="installmentNo"
+                    type="number"
+                    required
+                    min="1"
+                    step="1"
+                    value={formData.installmentNo}
+                    onChange={(e) => setFormData({ ...formData, installmentNo: e.target.value })}
+                    className="w-full px-4 py-2.5 border border-gray-300 rounded-lg text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-gray-50"
+                    placeholder="1"
+                  />
+                  <p className="text-xs text-gray-500 mt-1">
+                    Auto-set to next number (you can edit if needed)
+                  </p>
+                </div>
+
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <label htmlFor="unitsPurchased" className="block text-sm font-medium text-gray-700 mb-1">
+                      Units Purchased *
+                    </label>
+                    <input
+                      id="unitsPurchased"
+                      type="number"
+                      required
+                      min="0"
+                      step="0.0001"
+                      value={formData.unitsPurchased}
+                      onChange={(e) => setFormData({ ...formData, unitsPurchased: e.target.value })}
+                      className="w-full px-4 py-2.5 border border-gray-300 rounded-lg text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                      placeholder="0.0000"
+                    />
+                  </div>
+
+                  <div>
+                    <label htmlFor="pricePerUnit" className="block text-sm font-medium text-gray-700 mb-1">
+                      Price per Unit *
+                    </label>
+                    <input
+                      id="pricePerUnit"
+                      type="number"
+                      required
+                      min="0"
+                      step="0.0001"
+                      value={formData.pricePerUnit}
+                      onChange={(e) => setFormData({ ...formData, pricePerUnit: e.target.value })}
+                      className="w-full px-4 py-2.5 border border-gray-300 rounded-lg text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                      placeholder="0.0000"
+                    />
+                  </div>
+                </div>
+
+                {/* Calculated Purchase Value */}
+                {formData.unitsPurchased && formData.pricePerUnit && (
+                  <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
+                    <div className="flex justify-between items-center">
+                      <span className="text-sm font-medium text-gray-700">Purchase Value:</span>
+                      <span className="text-lg font-bold text-blue-700">
+                        ฿{(parseFloat(formData.unitsPurchased) * parseFloat(formData.pricePerUnit)).toLocaleString('th-TH', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                      </span>
+                    </div>
+                  </div>
+                )}
+              </>
+            )}
+
+            {/* Amount (only for non-mutual fund) */}
+            {investmentType !== 'mutual_fund' && (
             <div>
               <label htmlFor="amount" className="block text-sm font-medium text-gray-700 mb-1">
                 Amount (THB) *
@@ -186,6 +375,7 @@ export function AddTransactionModal({ isOpen, onClose, onCreate, portfolioId, po
                 placeholder="0"
               />
             </div>
+            )}
 
             {/* Date */}
             <div>
