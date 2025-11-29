@@ -108,7 +108,7 @@ export function PortfolioStats({ stats }: PortfolioStatsProps) {
                 <dd className={`text-2xl font-bold ${
                   stats.totalReturn >= 0 ? 'text-green-600' : 'text-red-600'
                 }`}>
-                  {formatPercentage(stats.totalReturnPercentage)}
+                  {formatPercentage(stats.returnPercentage)}
                 </dd>
                 <dd className={`text-sm ${
                   stats.totalReturn >= 0 ? 'text-green-600' : 'text-red-600'

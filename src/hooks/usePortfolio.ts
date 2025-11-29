@@ -3,6 +3,15 @@ import { portfolioService } from '../services/portfolio';
 import { useAuth } from './useAuth';
 import type { Portfolio, CreatePortfolioInput, UpdatePortfolioInput } from '../types/portfolio';
 
+export interface PortfolioStats {
+  totalValue: number;
+  totalInvested: number;
+  totalReturn: number;
+  returnPercentage: number;
+  transactionCount: number;
+  portfolioCount: number;
+}
+
 export function usePortfolio() {
   const [portfolios, setPortfolios] = useState<Portfolio[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -90,6 +99,7 @@ export function usePortfolio() {
   const totalInvested = portfolios.reduce((sum, p) => sum + p.totalInvested, 0);
   const totalReturn = totalValue - totalInvested;
   const totalReturnPercentage = totalInvested > 0 ? (totalReturn / totalInvested) * 100 : 0;
+  const transactionCount = portfolios.reduce((sum, p) => sum + p.transactionCount, 0);
 
   return {
     portfolios,
@@ -103,7 +113,8 @@ export function usePortfolio() {
       totalValue,
       totalInvested,
       totalReturn,
-      totalReturnPercentage,
+      returnPercentage: totalReturnPercentage,
+      transactionCount,
       portfolioCount: portfolios.length,
     },
   };

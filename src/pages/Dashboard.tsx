@@ -1,10 +1,11 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useAuth } from '../hooks/useAuth';
 import { usePortfolio } from '../hooks/usePortfolio';
 import { useTransaction } from '../hooks/useTransaction';
 import { useTheme } from '../contexts/ThemeContext';
 import { useToast } from '../contexts/ToastContext';
 import { useNavigate } from 'react-router-dom';
+import { generatePortfolioReport } from '../utils/exportToPDF';
 import { PortfolioList } from '../components/PortfolioList';
 import { CreatePortfolioModal } from '../components/CreatePortfolioModal';
 import { EditPortfolioModal } from '../components/EditPortfolioModal';
@@ -35,7 +36,12 @@ export function Dashboard() {
   const [isStockPriceModalOpen, setIsStockPriceModalOpen] = useState(false);
   const [selectedPortfolio, setSelectedPortfolio] = useState<Portfolio | null>(null);
   const [allTransactions, setAllTransactions] = useState<Transaction[]>([]);
+  const [isExportingPDF, setIsExportingPDF] = useState(false);
   const { createTransaction } = useTransaction(selectedPortfolio?.id);
+  
+  // Refs for chart elements (for PDF export)
+  const distributionChartRef = useRef<HTMLDivElement>(null);
+  const performanceChartRef = useRef<HTMLDivElement>(null);
 
   const handleLogout = async () => {
     try {
@@ -135,6 +141,29 @@ export function Dashboard() {
     showToast('Transaction added successfully', 'success');
   };
 
+  const handleExportPDF = async () => {
+    setIsExportingPDF(true);
+    try {
+      await generatePortfolioReport({
+        portfolios,
+        transactions: allTransactions,
+        stats,
+        appUser: appUser || undefined,
+        includeCharts: true,
+        chartElements: {
+          distributionChart: distributionChartRef.current || undefined,
+          performanceChart: performanceChartRef.current || undefined,
+        },
+      });
+      showToast('PDF report generated successfully', 'success');
+    } catch (error) {
+      console.error('Failed to generate PDF:', error);
+      showToast('Failed to generate PDF report', 'error');
+    } finally {
+      setIsExportingPDF(false);
+    }
+  };
+
   const fetchAllTransactions = async () => {
     if (!appUser?.uid) return;
     try {
@@ -224,22 +253,50 @@ export function Dashboard() {
 
           {/* Analytics Charts */}
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
-            <PortfolioDistributionChart portfolios={portfolios} />
-            <PerformanceChart portfolios={portfolios} allTransactions={allTransactions} />
+            <div ref={distributionChartRef}>
+              <PortfolioDistributionChart portfolios={portfolios} />
+            </div>
+            <div ref={performanceChartRef}>
+              <PerformanceChart portfolios={portfolios} allTransactions={allTransactions} />
+            </div>
           </div>
 
           {/* Create Portfolio Button */}
           <div className="mb-6 flex justify-between items-center">
             <h2 className="text-2xl font-bold text-gray-900 dark:text-white">My Portfolios</h2>
-            <button
-              onClick={() => setIsModalOpen(true)}
-              className="inline-flex items-center px-4 py-2 bg-gradient-to-r from-blue-600 to-indigo-600 text-white font-medium rounded-lg hover:from-blue-700 hover:to-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition shadow-md"
-            >
-              <svg className="h-5 w-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
-              </svg>
-              Create Portfolio
-            </button>
+            <div className="flex gap-3">
+              <button
+                onClick={handleExportPDF}
+                disabled={isExportingPDF || portfolios.length === 0}
+                className="inline-flex items-center px-4 py-2 bg-gradient-to-r from-green-600 to-emerald-600 text-white font-medium rounded-lg hover:from-green-700 hover:to-emerald-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500 transition shadow-md disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                {isExportingPDF ? (
+                  <>
+                    <svg className="animate-spin h-5 w-5 mr-2" fill="none" viewBox="0 0 24 24">
+                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                    </svg>
+                    Generating...
+                  </>
+                ) : (
+                  <>
+                    <svg className="h-5 w-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                    </svg>
+                    Export PDF
+                  </>
+                )}
+              </button>
+              <button
+                onClick={() => setIsModalOpen(true)}
+                className="inline-flex items-center px-4 py-2 bg-gradient-to-r from-blue-600 to-indigo-600 text-white font-medium rounded-lg hover:from-blue-700 hover:to-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition shadow-md"
+              >
+                <svg className="h-5 w-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+                </svg>
+                Create Portfolio
+              </button>
+            </div>
           </div>
 
           {/* Portfolio List */}
