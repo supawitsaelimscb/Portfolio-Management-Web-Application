@@ -11,6 +11,7 @@ import { EditPortfolioModal } from '../components/EditPortfolioModal';
 import { AddTransactionModal } from '../components/AddTransactionModal';
 import { ViewTransactionsModal } from '../components/ViewTransactionsModal';
 import { UpdateNavModal } from '../components/UpdateNavModal';
+import { UpdateStockPriceModal } from '../components/UpdateStockPriceModal';
 import { PortfolioStats } from '../components/PortfolioStats';
 import { PortfolioDistributionChart } from '../components/PortfolioDistributionChart';
 import { PerformanceChart } from '../components/PerformanceChart';
@@ -31,6 +32,7 @@ export function Dashboard() {
   const [isTransactionModalOpen, setIsTransactionModalOpen] = useState(false);
   const [isViewTransactionsModalOpen, setIsViewTransactionsModalOpen] = useState(false);
   const [isNavModalOpen, setIsNavModalOpen] = useState(false);
+  const [isStockPriceModalOpen, setIsStockPriceModalOpen] = useState(false);
   const [selectedPortfolio, setSelectedPortfolio] = useState<Portfolio | null>(null);
   const [allTransactions, setAllTransactions] = useState<Transaction[]>([]);
   const { createTransaction } = useTransaction(selectedPortfolio?.id);
@@ -105,6 +107,26 @@ export function Dashboard() {
     }
   };
 
+  const handleUpdateStockPrice = (portfolio: Portfolio) => {
+    setSelectedPortfolio(portfolio);
+    setIsStockPriceModalOpen(true);
+  };
+
+  const handleStockPriceUpdate = async (pricePerUnitUSD: number, exchangeRate: number) => {
+    if (!selectedPortfolio) return;
+    try {
+      await portfolioService.updateStockPrice(selectedPortfolio.id, pricePerUnitUSD, exchangeRate);
+      // Trigger recalculation of portfolio stats
+      await transactionService.updatePortfolioStats(selectedPortfolio.id);
+      await refreshPortfolios();
+      showToast('Stock price updated successfully', 'success');
+    } catch (error) {
+      showToast('Failed to update stock price', 'error');
+      console.error('Failed to update stock price:', error);
+      throw error;
+    }
+  };
+
   const handleTransactionCreated = async () => {
     // Refresh portfolios to update stats
     await refreshPortfolios();
@@ -134,17 +156,37 @@ export function Dashboard() {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
           <div className="flex justify-between items-center">
             <div className="flex items-center">
-              <div className="h-10 w-10 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-lg flex items-center justify-center mr-3">
-                <svg className="h-6 w-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                </svg>
-              </div>
+              {appUser?.photoURL ? (
+                <img
+                  src={appUser.photoURL}
+                  alt="Profile"
+                  className="h-10 w-10 rounded-full object-cover mr-3 border-2 border-gray-200 dark:border-gray-700"
+                />
+              ) : (
+                <div className="h-10 w-10 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-lg flex items-center justify-center mr-3">
+                  <svg className="h-6 w-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                  </svg>
+                </div>
+              )}
               <div>
                 <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Portfolio Manager</h1>
-                <p className="text-sm text-gray-500 dark:text-gray-400">Welcome back, {appUser?.displayName}!</p>
+                <p className="text-sm text-gray-500 dark:text-gray-400">
+                  Welcome back{appUser?.displayName ? `, ${appUser.displayName}` : ''}!
+                </p>
               </div>
             </div>
             <div className="flex items-center gap-2">
+              <button
+                onClick={() => navigate('/settings')}
+                className="p-2 rounded-lg text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition"
+                title="Settings"
+              >
+                <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                </svg>
+              </button>
               <button
                 onClick={toggleTheme}
                 className="p-2 rounded-lg text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition"
@@ -213,9 +255,9 @@ export function Dashboard() {
             <PortfolioList
               portfolios={portfolios}
               onEdit={handleEditPortfolio}
-              onDelete={async (id) => {
+              onDelete={async (portfolio) => {
                 try {
-                  await deletePortfolio(id);
+                  await deletePortfolio(portfolio.id);
                   showToast('Portfolio deleted successfully', 'success');
                 } catch (error) {
                   showToast('Failed to delete portfolio', 'error');
@@ -224,6 +266,7 @@ export function Dashboard() {
               onAddTransaction={handleAddTransaction}
               onViewTransactions={handleViewTransactions}
               onUpdateNav={handleUpdateNav}
+              onUpdateStockPrice={handleUpdateStockPrice}
             />
           )}
 
@@ -296,6 +339,17 @@ export function Dashboard() {
           onUpdate={handleNavUpdate}
           portfolio={selectedPortfolio}
         />
+
+          {/* Update Stock Price Modal */}
+          <UpdateStockPriceModal
+            isOpen={isStockPriceModalOpen}
+            onClose={() => {
+              setIsStockPriceModalOpen(false);
+              setSelectedPortfolio(null);
+            }}
+            onUpdate={handleStockPriceUpdate}
+            portfolio={selectedPortfolio}
+          />
 
         {/* Toast Notifications */}
         <ToastContainer />

@@ -8,6 +8,16 @@ export interface MutualFundDetails {
   pricePerUnit: number;
 }
 
+// Stock specific details
+export interface StockDetails {
+  stockName: string;
+  installmentNo: number;
+  unitsPurchased: number;
+  pricePerUnitUSD: number;
+  exchangeRate: number;
+  purchaseValueTHB: number;
+}
+
 export interface Transaction {
   id: string;
   userId: string;
@@ -18,6 +28,8 @@ export interface Transaction {
   notes?: string;
   // Mutual fund specific fields (optional, only for mutual_fund type)
   mutualFundDetails?: MutualFundDetails;
+  // Stock specific fields (optional, only for stock type)
+  stockDetails?: StockDetails;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -30,6 +42,8 @@ export interface CreateTransactionInput {
   notes?: string;
   // Mutual fund specific fields (optional)
   mutualFundDetails?: MutualFundDetails;
+  // Stock specific fields (optional)
+  stockDetails?: StockDetails;
 }
 
 export interface UpdateTransactionInput {
@@ -38,6 +52,7 @@ export interface UpdateTransactionInput {
   date?: Date;
   notes?: string;
   mutualFundDetails?: MutualFundDetails;
+  stockDetails?: StockDetails;
 }
 
 export interface TransactionStats {

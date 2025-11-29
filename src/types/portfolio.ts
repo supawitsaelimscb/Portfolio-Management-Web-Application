@@ -23,6 +23,9 @@ export interface Portfolio {
   // Mutual fund specific fields
   currentNavPerUnit?: number;
   totalUnits?: number;
+  // Stock specific fields
+  currentStockPriceUSD?: number;
+  currentExchangeRate?: number;
 }
 
 export interface CreatePortfolioInput {
@@ -40,30 +43,35 @@ export interface UpdatePortfolioInput {
   color?: string;
 }
 
-export const INVESTMENT_TYPES: Record<InvestmentType, { label: string; icon: string; color: string }> = {
+export const INVESTMENT_TYPES: Record<InvestmentType, { label: string; icon: string; color: string; chartColor: string }> = {
   cooperative: {
     label: 'Cooperative',
     icon: '🏛️',
     color: 'bg-blue-500',
+    chartColor: '#3b82f6', // blue-500
   },
   pvd: {
     label: 'Provident Fund (PVD)',
     icon: '💼',
     color: 'bg-green-500',
+    chartColor: '#22c55e', // green-500
   },
   mutual_fund: {
     label: 'Mutual Fund',
     icon: '📊',
     color: 'bg-purple-500',
+    chartColor: '#a855f7', // purple-500
   },
   stock: {
     label: 'Stock',
     icon: '📈',
     color: 'bg-red-500',
+    chartColor: '#ef4444', // red-500
   },
   savings: {
     label: 'Savings',
     icon: '💰',
     color: 'bg-yellow-500',
+    chartColor: '#eab308', // yellow-500
   },
 };

@@ -4,13 +4,14 @@ import { INVESTMENT_TYPES } from '../types/portfolio';
 interface PortfolioListProps {
   portfolios: Portfolio[];
   onEdit?: (portfolio: Portfolio) => void;
-  onDelete?: (portfolioId: string) => void;
+  onDelete?: (portfolio: Portfolio) => void;
   onAddTransaction?: (portfolio: Portfolio) => void;
   onViewTransactions?: (portfolio: Portfolio) => void;
   onUpdateNav?: (portfolio: Portfolio) => void;
+  onUpdateStockPrice?: (portfolio: Portfolio) => void;
 }
 
-export function PortfolioList({ portfolios, onEdit, onDelete, onAddTransaction, onViewTransactions, onUpdateNav }: PortfolioListProps) {
+export function PortfolioList({ portfolios, onEdit, onDelete, onAddTransaction, onViewTransactions, onUpdateNav, onUpdateStockPrice }: PortfolioListProps) {
   if (portfolios.length === 0) {
     return (
       <div className="text-center py-12">
@@ -74,7 +75,7 @@ export function PortfolioList({ portfolios, onEdit, onDelete, onAddTransaction, 
                     <button
                       onClick={() => {
                         if (window.confirm(`Delete "${portfolio.name}"? This action cannot be undone.`)) {
-                          onDelete(portfolio.id);
+                          onDelete(portfolio);
                         }
                       }}
                       className="p-1.5 hover:bg-white/20 rounded-lg transition"
@@ -173,7 +174,7 @@ export function PortfolioList({ portfolios, onEdit, onDelete, onAddTransaction, 
               )}
 
               {/* Action Buttons */}
-              {(onAddTransaction || onViewTransactions || onUpdateNav) && (
+              {(onAddTransaction || onViewTransactions || onUpdateNav || onUpdateStockPrice) && (
                 <div className="space-y-2 pt-3 border-t border-gray-100">
                   <div className="flex gap-2">
                     {onAddTransaction && (
@@ -218,6 +219,26 @@ export function PortfolioList({ portfolios, onEdit, onDelete, onAddTransaction, 
                         {portfolio.currentNavPerUnit && portfolio.currentNavPerUnit > 0 && (
                           <span className="ml-1.5 text-xs opacity-90">
                             (฿{portfolio.currentNavPerUnit.toFixed(4)})
+                          </span>
+                        )}
+                      </span>
+                    </button>
+                  )}
+                  
+                  {/* Update Stock Price button for stocks */}
+                  {onUpdateStockPrice && portfolio.investmentType === 'stock' && (
+                    <button
+                      onClick={() => onUpdateStockPrice(portfolio)}
+                      className="w-full px-3 py-2 bg-gradient-to-r from-red-600 to-pink-600 text-white text-sm font-medium rounded-lg hover:from-red-700 hover:to-pink-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500 transition shadow-sm"
+                    >
+                      <span className="flex items-center justify-center">
+                        <svg className="w-4 h-4 mr-1.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6" />
+                        </svg>
+                        Update Price
+                        {portfolio.currentStockPriceUSD && portfolio.currentStockPriceUSD > 0 && (
+                          <span className="ml-1.5 text-xs opacity-90">
+                            (${portfolio.currentStockPriceUSD.toFixed(2)})
                           </span>
                         )}
                       </span>

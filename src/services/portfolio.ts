@@ -85,6 +85,8 @@ export const portfolioService = {
           color: data.color,
           currentNavPerUnit: data.currentNavPerUnit || 0,
           totalUnits: data.totalUnits || 0,
+          currentStockPriceUSD: data.currentStockPriceUSD || 0,
+          currentExchangeRate: data.currentExchangeRate || 0,
           createdAt: data.createdAt?.toDate(),
           updatedAt: data.updatedAt?.toDate(),
         });
@@ -124,6 +126,8 @@ export const portfolioService = {
         color: data.color,
         currentNavPerUnit: data.currentNavPerUnit || 0,
         totalUnits: data.totalUnits || 0,
+        currentStockPriceUSD: data.currentStockPriceUSD || 0,
+        currentExchangeRate: data.currentExchangeRate || 0,
         createdAt: data.createdAt?.toDate(),
         updatedAt: data.updatedAt?.toDate(),
       };
@@ -201,6 +205,22 @@ export const portfolioService = {
       console.log('✅ NAV updated:', portfolioId, navPerUnit);
     } catch (error: any) {
       console.error('❌ Error updating NAV:', error.message);
+      throw error;
+    }
+  },
+
+  // Update stock price for stock portfolio
+  async updateStockPrice(portfolioId: string, pricePerUnitUSD: number, exchangeRate: number): Promise<void> {
+    try {
+      const docRef = doc(db, 'portfolios', portfolioId);
+      await updateDoc(docRef, {
+        currentStockPriceUSD: pricePerUnitUSD,
+        currentExchangeRate: exchangeRate,
+        updatedAt: Timestamp.now(),
+      });
+      console.log('✅ Stock price updated:', portfolioId, pricePerUnitUSD, exchangeRate);
+    } catch (error: any) {
+      console.error('❌ Error updating stock price:', error.message);
       throw error;
     }
   },

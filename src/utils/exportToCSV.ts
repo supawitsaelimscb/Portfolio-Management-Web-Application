@@ -15,6 +15,9 @@ export function exportTransactionsToCSV(
     'Units Purchased',
     'Price Per Unit',
     'Purchase Value',
+    'Stock Name',
+    'Price Per Unit USD',
+    'Exchange Rate',
     'Notes',
   ];
 
@@ -30,12 +33,20 @@ export function exportTransactionsToCSV(
     
     // Mutual fund details (if available)
     const fundName = transaction.mutualFundDetails?.fundName || '';
-    const installmentNo = transaction.mutualFundDetails?.installmentNo?.toString() || '';
-    const unitsPurchased = transaction.mutualFundDetails?.unitsPurchased?.toFixed(4) || '';
-    const pricePerUnit = transaction.mutualFundDetails?.pricePerUnit?.toFixed(4) || '';
-    const purchaseValue = transaction.mutualFundDetails
+    const fundInstallmentNo = transaction.mutualFundDetails?.installmentNo?.toString() || '';
+    const fundUnits = transaction.mutualFundDetails?.unitsPurchased?.toFixed(4) || '';
+    const fundPricePerUnit = transaction.mutualFundDetails?.pricePerUnit?.toFixed(4) || '';
+    const fundPurchaseValue = transaction.mutualFundDetails
       ? (transaction.mutualFundDetails.unitsPurchased * transaction.mutualFundDetails.pricePerUnit).toFixed(2)
       : '';
+    
+    // Stock details (if available)
+    const stockName = transaction.stockDetails?.stockName || '';
+    const stockInstallmentNo = transaction.stockDetails?.installmentNo?.toString() || '';
+    const stockUnits = transaction.stockDetails?.unitsPurchased?.toFixed(4) || '';
+    const stockPriceUSD = transaction.stockDetails?.pricePerUnitUSD?.toFixed(2) || '';
+    const stockExchangeRate = transaction.stockDetails?.exchangeRate?.toFixed(2) || '';
+    const stockPurchaseValue = transaction.stockDetails?.purchaseValueTHB?.toFixed(2) || '';
     
     const notes = transaction.notes || '';
 
@@ -43,11 +54,14 @@ export function exportTransactionsToCSV(
       formattedDate,
       type,
       amount,
-      fundName,
-      installmentNo,
-      unitsPurchased,
-      pricePerUnit,
-      purchaseValue,
+      fundName || stockName,
+      fundInstallmentNo || stockInstallmentNo,
+      fundUnits || stockUnits,
+      fundPricePerUnit || stockPurchaseValue,
+      fundPurchaseValue || stockPurchaseValue,
+      stockName,
+      stockPriceUSD,
+      stockExchangeRate,
       notes,
     ];
   });

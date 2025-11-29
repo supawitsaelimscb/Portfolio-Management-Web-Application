@@ -17,9 +17,9 @@ export function PortfolioDistributionChart({ portfolios }: PortfolioDistribution
       const typeInfo = INVESTMENT_TYPES[portfolio.investmentType];
       acc.push({
         type: portfolio.investmentType,
-        name: typeInfo.name,
+        name: typeInfo.label,
         value: portfolio.currentValue,
-        color: typeInfo.color,
+        color: typeInfo.chartColor,
       });
     }
     
@@ -97,7 +97,7 @@ export function PortfolioDistributionChart({ portfolios }: PortfolioDistribution
           <Legend 
             verticalAlign="bottom" 
             height={36}
-            formatter={(value, entry: any) => (
+            formatter={(_value, entry: any) => (
               <span className="text-sm text-gray-700">
                 {entry.payload.name}: {formatCurrency(entry.payload.value)}
               </span>

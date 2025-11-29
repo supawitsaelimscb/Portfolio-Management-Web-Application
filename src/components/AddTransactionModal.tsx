@@ -18,10 +18,17 @@ export function AddTransactionModal({ isOpen, onClose, onCreate, portfolioId, po
     amount: string;
     date: string;
     notes: string;
+    // Mutual fund fields
     fundName: string;
     installmentNo: string;
     unitsPurchased: string;
     pricePerUnit: string;
+    // Stock fields
+    stockName: string;
+    stockInstallmentNo: string;
+    stockUnits: string;
+    pricePerUnitUSD: string;
+    exchangeRate: string;
   }>({
     type: 'deposit',
     amount: '',
@@ -31,38 +38,65 @@ export function AddTransactionModal({ isOpen, onClose, onCreate, portfolioId, po
     installmentNo: '',
     unitsPurchased: '',
     pricePerUnit: '',
+    stockName: '',
+    stockInstallmentNo: '',
+    stockUnits: '',
+    pricePerUnitUSD: '',
+    exchangeRate: '',
   });
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [existingFundNames, setExistingFundNames] = useState<string[]>([]);
+  const [existingStockNames, setExistingStockNames] = useState<string[]>([]);
 
-  // Fetch existing fund names when modal opens for mutual fund portfolios
+  // Fetch existing fund/stock names when modal opens
   useEffect(() => {
-    const fetchFundNames = async () => {
-      if (isOpen && investmentType === 'mutual_fund' && portfolioId) {
+    const fetchNames = async () => {
+      if (isOpen && portfolioId) {
         try {
           const transactions = await transactionService.getPortfolioTransactions(portfolioId);
-          const uniqueFundNames = [...new Set(
-            transactions
-              .filter(t => t.mutualFundDetails?.fundName)
-              .map(t => t.mutualFundDetails!.fundName)
-          )];
-          setExistingFundNames(uniqueFundNames);
           
-          // Auto-fill fund name if there's only one
-          if (uniqueFundNames.length === 1 && !formData.fundName) {
-            setFormData(prev => ({ ...prev, fundName: uniqueFundNames[0] }));
-          }
+          if (investmentType === 'mutual_fund') {
+            const uniqueFundNames = [...new Set(
+              transactions
+                .filter(t => t.mutualFundDetails?.fundName)
+                .map(t => t.mutualFundDetails!.fundName)
+            )];
+            setExistingFundNames(uniqueFundNames);
+            
+            // Auto-fill fund name if there's only one
+            if (uniqueFundNames.length === 1 && !formData.fundName) {
+              setFormData(prev => ({ ...prev, fundName: uniqueFundNames[0] }));
+            }
 
-          // Auto-calculate next installment number (total transactions + 1)
-          const nextInstallmentNo = transactions.length + 1;
-          setFormData(prev => ({ ...prev, installmentNo: nextInstallmentNo.toString() }));
+            // Auto-calculate next installment number
+            const nextInstallmentNo = transactions.length + 1;
+            setFormData(prev => ({ ...prev, installmentNo: nextInstallmentNo.toString() }));
+          }
+          
+          if (investmentType === 'stock') {
+            const uniqueStockNames = [...new Set(
+              transactions
+                .filter(t => t.stockDetails?.stockName)
+                .map(t => t.stockDetails!.stockName)
+            )];
+            setExistingStockNames(uniqueStockNames);
+            
+            // Auto-fill stock name if there's only one
+            if (uniqueStockNames.length === 1 && !formData.stockName) {
+              setFormData(prev => ({ ...prev, stockName: uniqueStockNames[0] }));
+            }
+
+            // Auto-calculate next installment number
+            const nextInstallmentNo = transactions.length + 1;
+            setFormData(prev => ({ ...prev, stockInstallmentNo: nextInstallmentNo.toString() }));
+          }
         } catch (error) {
-          console.error('Failed to fetch fund names:', error);
+          console.error('Failed to fetch transaction data:', error);
         }
       }
     };
-    fetchFundNames();
+    fetchNames();
   }, [isOpen, investmentType, portfolioId]);
 
   const formatNumberWithCommas = (value: string): string => {
@@ -81,8 +115,9 @@ export function AddTransactionModal({ isOpen, onClose, onCreate, portfolioId, po
     e.preventDefault();
     setError(null);
 
-    // For mutual funds, calculate amount from units * price
     let amountValue: number;
+    
+    // For mutual funds, calculate amount from units * price
     if (investmentType === 'mutual_fund') {
       const units = parseFloat(formData.unitsPurchased);
       const price = parseFloat(formData.pricePerUnit);
@@ -105,7 +140,37 @@ export function AddTransactionModal({ isOpen, onClose, onCreate, portfolioId, po
       }
       
       amountValue = units * price;
-    } else {
+    } 
+    // For stocks, calculate THB value from units * USD price * exchange rate
+    else if (investmentType === 'stock') {
+      const units = parseFloat(formData.stockUnits);
+      const priceUSD = parseFloat(formData.pricePerUnitUSD);
+      const exchangeRate = parseFloat(formData.exchangeRate);
+      
+      if (!units || units <= 0) {
+        setError('Units purchased must be greater than 0');
+        return;
+      }
+      if (!priceUSD || priceUSD <= 0) {
+        setError('Price per unit (USD) must be greater than 0');
+        return;
+      }
+      if (!exchangeRate || exchangeRate <= 0) {
+        setError('Exchange rate must be greater than 0');
+        return;
+      }
+      if (!formData.stockName.trim()) {
+        setError('Stock name is required');
+        return;
+      }
+      if (!formData.stockInstallmentNo || parseInt(formData.stockInstallmentNo) <= 0) {
+        setError('Installment number must be greater than 0');
+        return;
+      }
+      
+      amountValue = units * priceUSD * exchangeRate;
+    } 
+    else {
       amountValue = parseFloat(formData.amount.replace(/,/g, ''));
       if (!amountValue || amountValue <= 0) {
         setError('Amount must be greater than 0');
@@ -133,6 +198,22 @@ export function AddTransactionModal({ isOpen, onClose, onCreate, portfolioId, po
           pricePerUnit: parseFloat(formData.pricePerUnit),
         };
       }
+      
+      // Add stock details if applicable
+      if (investmentType === 'stock') {
+        const units = parseFloat(formData.stockUnits);
+        const priceUSD = parseFloat(formData.pricePerUnitUSD);
+        const exchangeRate = parseFloat(formData.exchangeRate);
+        
+        input.stockDetails = {
+          stockName: formData.stockName,
+          installmentNo: parseInt(formData.stockInstallmentNo),
+          unitsPurchased: units,
+          pricePerUnitUSD: priceUSD,
+          exchangeRate: exchangeRate,
+          purchaseValueTHB: units * priceUSD * exchangeRate,
+        };
+      }
 
       await onCreate(input);
       
@@ -146,6 +227,11 @@ export function AddTransactionModal({ isOpen, onClose, onCreate, portfolioId, po
         installmentNo: '',
         unitsPurchased: '',
         pricePerUnit: '',
+        stockName: '',
+        stockInstallmentNo: '',
+        stockUnits: '',
+        pricePerUnitUSD: '',
+        exchangeRate: '',
       });
       onClose();
     } catch (err: any) {
@@ -359,8 +445,134 @@ export function AddTransactionModal({ isOpen, onClose, onCreate, portfolioId, po
               </>
             )}
 
-            {/* Amount (only for non-mutual fund) */}
-            {investmentType !== 'mutual_fund' && (
+            {/* Stock Fields */}
+            {investmentType === 'stock' && (
+              <>
+                <div>
+                  <label htmlFor="stockName" className="block text-sm font-medium text-gray-700 mb-1">
+                    Stock Name *
+                  </label>
+                  <input
+                    id="stockName"
+                    type="text"
+                    required
+                    list="stockNameOptions"
+                    value={formData.stockName}
+                    onChange={(e) => setFormData({ ...formData, stockName: e.target.value })}
+                    className="w-full px-4 py-2.5 border border-gray-300 rounded-lg text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    placeholder="e.g., NVDA, AAPL, TSLA"
+                  />
+                  <datalist id="stockNameOptions">
+                    {existingStockNames.map((name) => (
+                      <option key={name} value={name} />
+                    ))}
+                  </datalist>
+                  {existingStockNames.length > 0 && (
+                    <p className="text-xs text-gray-500 mt-1">
+                      💡 Select from dropdown or type a new stock ticker
+                    </p>
+                  )}
+                </div>
+
+                <div>
+                  <label htmlFor="stockInstallmentNo" className="block text-sm font-medium text-gray-700 mb-1">
+                    Installment No. *
+                  </label>
+                  <input
+                    id="stockInstallmentNo"
+                    type="number"
+                    required
+                    min="1"
+                    value={formData.stockInstallmentNo}
+                    onChange={(e) => setFormData({ ...formData, stockInstallmentNo: e.target.value })}
+                    className="w-full px-4 py-2.5 border border-gray-300 rounded-lg text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    placeholder="1"
+                  />
+                  <p className="text-xs text-gray-500 mt-1">
+                    🔢 Auto-incremented based on transaction history
+                  </p>
+                </div>
+
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <label htmlFor="stockUnits" className="block text-sm font-medium text-gray-700 mb-1">
+                      Units Purchased *
+                    </label>
+                    <input
+                      id="stockUnits"
+                      type="number"
+                      required
+                      min="0"
+                      step="0.0001"
+                      value={formData.stockUnits}
+                      onChange={(e) => setFormData({ ...formData, stockUnits: e.target.value })}
+                      className="w-full px-4 py-2.5 border border-gray-300 rounded-lg text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                      placeholder="0.0000"
+                    />
+                  </div>
+
+                  <div>
+                    <label htmlFor="pricePerUnitUSD" className="block text-sm font-medium text-gray-700 mb-1">
+                      Price per Unit (USD) *
+                    </label>
+                    <input
+                      id="pricePerUnitUSD"
+                      type="number"
+                      required
+                      min="0"
+                      step="0.01"
+                      value={formData.pricePerUnitUSD}
+                      onChange={(e) => setFormData({ ...formData, pricePerUnitUSD: e.target.value })}
+                      className="w-full px-4 py-2.5 border border-gray-300 rounded-lg text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                      placeholder="$0.00"
+                    />
+                  </div>
+                </div>
+
+                <div>
+                  <label htmlFor="exchangeRate" className="block text-sm font-medium text-gray-700 mb-1">
+                    Exchange Rate (THB/USD) *
+                  </label>
+                  <input
+                    id="exchangeRate"
+                    type="number"
+                    required
+                    min="0"
+                    step="0.01"
+                    value={formData.exchangeRate}
+                    onChange={(e) => setFormData({ ...formData, exchangeRate: e.target.value })}
+                    className="w-full px-4 py-2.5 border border-gray-300 rounded-lg text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    placeholder="31.88"
+                  />
+                  <p className="text-xs text-gray-500 mt-1">
+                    💱 Current exchange rate from USD to THB
+                  </p>
+                </div>
+
+                {/* Calculated Purchase Value */}
+                {formData.stockUnits && formData.pricePerUnitUSD && formData.exchangeRate && (
+                  <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
+                    <div className="space-y-2">
+                      <div className="flex justify-between items-center">
+                        <span className="text-sm text-gray-600">USD Value:</span>
+                        <span className="text-sm font-semibold text-gray-900">
+                          ${(parseFloat(formData.stockUnits) * parseFloat(formData.pricePerUnitUSD)).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                        </span>
+                      </div>
+                      <div className="flex justify-between items-center pt-2 border-t border-blue-300">
+                        <span className="text-sm font-medium text-gray-700">Purchase Value (THB):</span>
+                        <span className="text-lg font-bold text-blue-700">
+                          ฿{(parseFloat(formData.stockUnits) * parseFloat(formData.pricePerUnitUSD) * parseFloat(formData.exchangeRate)).toLocaleString('th-TH', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+                )}
+              </>
+            )}
+
+            {/* Amount (only for non-mutual fund and non-stock) */}
+            {investmentType !== 'mutual_fund' && investmentType !== 'stock' && (
             <div>
               <label htmlFor="amount" className="block text-sm font-medium text-gray-700 mb-1">
                 Amount (THB) *

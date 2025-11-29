@@ -37,6 +37,11 @@ export const transactionService = {
       if (input.mutualFundDetails) {
         transactionData.mutualFundDetails = input.mutualFundDetails;
       }
+      
+      // Add stock details if provided
+      if (input.stockDetails) {
+        transactionData.stockDetails = input.stockDetails;
+      }
 
       await setDoc(transactionRef, transactionData);
 
@@ -49,6 +54,7 @@ export const transactionService = {
         date: input.date,
         notes: input.notes,
         mutualFundDetails: input.mutualFundDetails,
+        stockDetails: input.stockDetails,
         createdAt: now.toDate(),
         updatedAt: now.toDate(),
       };
@@ -87,6 +93,7 @@ export const transactionService = {
           date: data.date?.toDate(),
           notes: data.notes,
           mutualFundDetails: data.mutualFundDetails,
+          stockDetails: data.stockDetails,
           createdAt: data.createdAt?.toDate(),
           updatedAt: data.updatedAt?.toDate(),
         });
@@ -123,6 +130,7 @@ export const transactionService = {
           date: data.date?.toDate(),
           notes: data.notes,
           mutualFundDetails: data.mutualFundDetails,
+          stockDetails: data.stockDetails,
           createdAt: data.createdAt?.toDate(),
           updatedAt: data.updatedAt?.toDate(),
         });
@@ -260,6 +268,29 @@ export const transactionService = {
     }
   },
 
+  // Calculate total units for stock portfolios
+  async getStockUnits(portfolioId: string): Promise<number> {
+    try {
+      const transactions = await this.getPortfolioTransactions(portfolioId);
+      let totalUnits = 0;
+
+      transactions.forEach((t) => {
+        if (t.stockDetails) {
+          if (t.type === 'deposit') {
+            totalUnits += t.stockDetails.unitsPurchased;
+          } else {
+            totalUnits -= t.stockDetails.unitsPurchased;
+          }
+        }
+      });
+
+      return totalUnits;
+    } catch (error: any) {
+      console.error('❌ Error calculating stock units:', error.message);
+      throw error;
+    }
+  },
+
   // Update portfolio statistics after transaction changes
   async updatePortfolioStats(portfolioId: string): Promise<void> {
     try {
@@ -282,6 +313,17 @@ export const transactionService = {
           currentValue = totalUnits * portfolio.currentNavPerUnit;
         } else {
           // If no NAV set, use net invested as fallback
+          currentValue = stats.netInvested;
+        }
+      } else if (portfolio.investmentType === 'stock') {
+        // For stocks, calculate value based on units × price × exchange rate
+        totalUnits = await this.getStockUnits(portfolioId);
+        
+        if (portfolio.currentStockPriceUSD && portfolio.currentStockPriceUSD > 0 && 
+            portfolio.currentExchangeRate && portfolio.currentExchangeRate > 0) {
+          currentValue = totalUnits * portfolio.currentStockPriceUSD * portfolio.currentExchangeRate;
+        } else {
+          // If no price set, use net invested as fallback
           currentValue = stats.netInvested;
         }
       } else {

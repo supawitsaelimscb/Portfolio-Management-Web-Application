@@ -31,6 +31,7 @@ export const authService = {
       const userDoc = {
         email,
         displayName,
+        photoURL: '',
         preferences: {
           currency: 'THB',
           dateFormat: 'DD/MM/YYYY',
@@ -112,8 +113,8 @@ export const authService = {
       return {
         uid: user.uid,
         email: data.email,
-        displayName: data.displayName,
-        photoURL: user.photoURL || undefined,
+        displayName: data.displayName || user.displayName || '',
+        photoURL: data.photoURL || undefined,
         preferences: data.preferences,
         createdAt: data.createdAt?.toDate(),
         updatedAt: data.updatedAt?.toDate(),

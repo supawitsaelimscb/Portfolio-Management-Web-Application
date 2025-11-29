@@ -76,6 +76,11 @@ export function TransactionList({ transactions, onDelete, onEdit, deletingId }: 
                       #{transaction.mutualFundDetails.installmentNo}
                     </span>
                   )}
+                  {transaction.stockDetails && (
+                    <span className="ml-2 text-xs font-normal text-gray-600">
+                      #{transaction.stockDetails.installmentNo}
+                    </span>
+                  )}
                 </p>
                 <p className={`text-base font-bold ${
                   transaction.type === 'deposit' ? 'text-green-700' : 'text-red-700'
@@ -96,11 +101,26 @@ export function TransactionList({ transactions, onDelete, onEdit, deletingId }: 
                 </div>
               )}
               
+              {/* Stock Details */}
+              {transaction.stockDetails && (
+                <div className="mt-1">
+                  <p className="text-xs font-medium text-gray-700">
+                    {transaction.stockDetails.stockName}
+                  </p>
+                  <p className="text-xs text-gray-500">
+                    {transaction.stockDetails.unitsPurchased.toFixed(4)} units × ${transaction.stockDetails.pricePerUnitUSD.toFixed(2)}
+                  </p>
+                  <p className="text-xs text-gray-500">
+                    Exchange: ฿{transaction.stockDetails.exchangeRate.toFixed(2)} = ฿{transaction.stockDetails.purchaseValueTHB.toLocaleString('th-TH', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                  </p>
+                </div>
+              )}
+              
               <div className="flex items-center justify-between mt-1">
                 <p className="text-xs text-gray-500">
                   {formatDate(transaction.date)}
                 </p>
-                {transaction.notes && !transaction.mutualFundDetails && (
+                {transaction.notes && !transaction.mutualFundDetails && !transaction.stockDetails && (
                   <p className="text-xs text-gray-500 truncate ml-2 max-w-[150px]">
                     {transaction.notes}
                   </p>
