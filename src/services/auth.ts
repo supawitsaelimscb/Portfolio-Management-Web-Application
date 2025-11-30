@@ -61,8 +61,11 @@ export const authService = {
   // Login user
   async login(email: string, password: string): Promise<User> {
     try {
+      console.log('🔐 Attempting login for:', email);
       const credential = await signInWithEmailAndPassword(auth, email, password);
 
+      console.log('✅ Firebase authentication successful');
+      
       // Update last login time
       await setDoc(
         doc(db, 'users', credential.user.uid),
@@ -73,7 +76,7 @@ export const authService = {
       console.log('✅ User logged in successfully:', credential.user.email);
       return credential.user;
     } catch (error: any) {
-      console.error('❌ Login error:', error.message);
+      console.error('❌ Login error:', error.code, error.message);
       throw error;
     }
   },

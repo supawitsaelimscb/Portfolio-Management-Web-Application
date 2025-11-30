@@ -1,7 +1,10 @@
 import { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../hooks/useAuth';
-import { db } from '../services/firebase';
+import { db, auth } from '../services/firebase';
+import { otpService } from '../services/otp';
+import { OTPModal } from '../components/OTPModal';
+import { signOut } from 'firebase/auth';
 
 export function Login() {
   const [email, setEmail] = useState('');
@@ -9,6 +12,8 @@ export function Login() {
   const [isLoading, setIsLoading] = useState(false);
   const [localError, setLocalError] = useState<string | null>(null);
   const [isDbConnected, setIsDbConnected] = useState(false);
+  const [showOTPModal, setShowOTPModal] = useState(false);
+  const [pendingUserId, setPendingUserId] = useState<string | null>(null);
   const { login } = useAuth();
   const navigate = useNavigate();
 
@@ -31,13 +36,65 @@ export function Login() {
     setLocalError(null);
 
     try {
+      // Step 1: Login with email/password
       await login(email, password);
+      
+      // Step 2: Check if user has 2FA enabled
+      const user = auth.currentUser;
+      if (user) {
+        const is2FAEnabled = await otpService.is2FAEnabled(user.uid);
+        
+        if (is2FAEnabled) {
+          // Generate and send OTP
+          const otp = otpService.generateOTP();
+          await otpService.storeOTP(user.uid, otp);
+          await otpService.sendOTPEmail(email, otp);
+          
+          // Store user ID and show OTP modal
+          setPendingUserId(user.uid);
+          setShowOTPModal(true);
+          setIsLoading(false);
+          
+          // Important: Don't navigate yet, wait for OTP verification
+          return;
+        }
+      }
+      
+      // If no 2FA, proceed to dashboard
       navigate('/dashboard');
     } catch (err: any) {
       setLocalError(err.message);
     } finally {
       setIsLoading(false);
     }
+  };
+
+  const handleOTPVerify = async (otp: string): Promise<boolean> => {
+    if (!pendingUserId) return false;
+    
+    const isValid = await otpService.verifyOTP(pendingUserId, otp);
+    if (isValid) {
+      setShowOTPModal(false);
+      navigate('/dashboard');
+      return true;
+    }
+    return false;
+  };
+
+  const handleOTPResend = async () => {
+    if (!pendingUserId) return;
+    
+    const otp = otpService.generateOTP();
+    await otpService.storeOTP(pendingUserId, otp);
+    await otpService.sendOTPEmail(email, otp);
+  };
+
+  const handleOTPClose = async () => {
+    // If user closes OTP modal, log them out for security
+    setShowOTPModal(false);
+    setPendingUserId(null);
+    await signOut(auth);
+    setLocalError('Login cancelled. Please try again.');
   };
 
   return (
@@ -154,6 +211,15 @@ export function Login() {
           </div>
         </div>
       </div>
+
+      {/* OTP Modal */}
+      <OTPModal
+        isOpen={showOTPModal}
+        email={email}
+        onVerify={handleOTPVerify}
+        onClose={handleOTPClose}
+        onResend={handleOTPResend}
+      />
     </div>
   );
 }

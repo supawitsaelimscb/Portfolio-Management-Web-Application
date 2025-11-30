@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import { PieChart, Pie, Cell, ResponsiveContainer, Legend, Tooltip } from 'recharts';
 import type { Portfolio } from '../types/portfolio';
 import { INVESTMENT_TYPES } from '../types/portfolio';
@@ -7,6 +8,8 @@ interface PortfolioDistributionChartProps {
 }
 
 export function PortfolioDistributionChart({ portfolios }: PortfolioDistributionChartProps) {
+  const [isExpanded, setIsExpanded] = useState(false);
+
   // Group portfolios by investment type and sum their current values
   const distributionData = portfolios.reduce((acc, portfolio) => {
     const existingType = acc.find(item => item.type === portfolio.investmentType);
@@ -75,9 +78,40 @@ export function PortfolioDistributionChart({ portfolios }: PortfolioDistribution
   }
 
   return (
-    <div className="bg-white rounded-xl shadow-lg border border-gray-100 p-6">
-      <h3 className="text-lg font-semibold text-gray-900 mb-4">Portfolio Distribution</h3>
-      <ResponsiveContainer width="100%" height={300}>
+    <>
+      {/* Backdrop */}
+      {isExpanded && (
+        <div 
+          className="fixed inset-0 bg-black bg-opacity-50 z-40 animate-fadeIn"
+          onClick={() => setIsExpanded(false)}
+        />
+      )}
+      
+      {/* Chart Container */}
+      <div className={`bg-white rounded-xl shadow-lg border border-gray-100 p-6 transition-all duration-500 ease-in-out ${
+        isExpanded 
+          ? 'fixed inset-4 md:inset-8 lg:inset-16 z-50 overflow-auto animate-scaleIn' 
+          : 'animate-scaleOut'
+      }`}>
+        <div className="flex items-center justify-between mb-4">
+          <h3 className="text-lg font-semibold text-gray-900 transition-all duration-300">Portfolio Distribution</h3>
+          <button
+            onClick={() => setIsExpanded(!isExpanded)}
+            className="p-2 hover:bg-gray-100 rounded-lg transition-all duration-200 hover:scale-110 active:scale-95"
+            title={isExpanded ? 'Minimize' : 'Expand'}
+          >
+          {isExpanded ? (
+            <svg className="w-5 h-5 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+            </svg>
+          ) : (
+            <svg className="w-5 h-5 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 8V4m0 0h4M4 4l5 5m11-1V4m0 0h-4m4 0l-5 5M4 16v4m0 0h4m-4 0l5-5m11 5l-5-5m5 5v-4m0 4h-4" />
+            </svg>
+          )}
+        </button>
+      </div>
+      <ResponsiveContainer width="100%" height={isExpanded ? 600 : 300}>
         <PieChart>
           <Pie
             data={chartData}
@@ -85,7 +119,7 @@ export function PortfolioDistributionChart({ portfolios }: PortfolioDistribution
             cy="50%"
             labelLine={false}
             label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}
-            outerRadius={80}
+            outerRadius={isExpanded ? 180 : 80}
             fill="#8884d8"
             dataKey="value"
           >
@@ -105,6 +139,7 @@ export function PortfolioDistributionChart({ portfolios }: PortfolioDistribution
           />
         </PieChart>
       </ResponsiveContainer>
-    </div>
+      </div>
+    </>
   );
 }

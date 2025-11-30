@@ -146,9 +146,12 @@ export function PVDDetail() {
             value={selectedYear}
             onChange={(e) => setSelectedYear(parseInt(e.target.value))}
             className="px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-900 bg-white"
+            style={{ color: '#111827' }}
           >
             {availableYears.map(year => (
-              <option key={year} value={year}>{year}</option>
+              <option key={year} value={year} className="text-gray-900" style={{ color: '#111827', backgroundColor: '#ffffff' }}>
+                {year}
+              </option>
             ))}
           </select>
         </div>

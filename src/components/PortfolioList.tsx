@@ -44,13 +44,14 @@ export function PortfolioList({ portfolios, onEdit, onDelete, onAddTransaction, 
 
   return (
     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-      {portfolios.map((portfolio) => {
+      {portfolios.map((portfolio, index) => {
         const investmentType = INVESTMENT_TYPES[portfolio.investmentType];
 
         return (
           <div
             key={portfolio.id}
-            className="bg-white dark:bg-gray-800 rounded-xl shadow-md hover:shadow-lg dark:shadow-gray-900/50 transition-shadow duration-200 overflow-hidden"
+            className="bg-white dark:bg-gray-800 rounded-xl shadow-md hover:shadow-xl dark:shadow-gray-900/50 transition-all duration-300 overflow-hidden transform hover:scale-105 animate-fadeIn"
+            style={{ animationDelay: `${index * 0.1}s` }}
           >
             {/* Header */}
             <div className={`${investmentType.color} p-4 text-white`}>

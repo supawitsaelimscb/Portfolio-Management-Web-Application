@@ -5,7 +5,7 @@ import path from 'path'
 // https://vitejs.dev/config/
 export default defineConfig({
   plugins: [react()],
-  base: '/Portfolio-Management-Web-Application/',
+  base: process.env.NODE_ENV === 'production' ? '/Portfolio-Management-Web-Application/' : '/',
   resolve: {
     alias: {
       '@': path.resolve(__dirname, './src'),
