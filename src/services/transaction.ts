@@ -74,7 +74,9 @@ export const transactionService = {
       // Update portfolio statistics
       await this.updatePortfolioStats(input.portfolioId);
 
-      console.log('✅ Transaction created:', transaction.type, transaction.amount);
+      if (import.meta.env.DEV) {
+        console.log('✅ Transaction created:', transaction.type, transaction.amount);
+      }
       return transaction;
     } catch (error: any) {
       console.error('❌ Error creating transaction:', error.message);
@@ -118,7 +120,9 @@ export const transactionService = {
         return b.date.getTime() - a.date.getTime();
       });
 
-      console.log(`✅ Fetched ${transactions.length} transactions`);
+      if (import.meta.env.DEV) {
+        console.log(`✅ Fetched ${transactions.length} transactions`);
+      }
       return transactions;
     } catch (error: any) {
       console.error('❌ Error fetching transactions:', error.message);
@@ -218,7 +222,9 @@ export const transactionService = {
       // Update portfolio statistics
       await this.updatePortfolioStats(portfolioId);
 
-      console.log('✅ Transaction updated:', transactionId);
+      if (import.meta.env.DEV) {
+        console.log('✅ Transaction updated:', transactionId);
+      }
     } catch (error: any) {
       console.error('❌ Error updating transaction:', error.message);
       throw error;
@@ -234,7 +240,9 @@ export const transactionService = {
       // Update portfolio statistics
       await this.updatePortfolioStats(portfolioId);
 
-      console.log('✅ Transaction deleted:', transactionId);
+      if (import.meta.env.DEV) {
+        console.log('✅ Transaction deleted:', transactionId);
+      }
     } catch (error: any) {
       console.error('❌ Error deleting transaction:', error.message);
       throw error;
@@ -369,7 +377,9 @@ export const transactionService = {
         totalUnits,
       });
 
-      console.log('✅ Portfolio stats updated');
+      if (import.meta.env.DEV) {
+        console.log('✅ Portfolio stats updated');
+      }
     } catch (error: any) {
       console.error('❌ Error updating portfolio stats:', error.message);
       throw error;

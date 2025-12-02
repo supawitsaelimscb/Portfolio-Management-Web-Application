@@ -50,7 +50,9 @@ export const authService = {
 
       await setDoc(doc(db, 'users', credential.user.uid), userDoc);
 
-      console.log('✅ User registered successfully:', displayName);
+      if (import.meta.env.DEV) {
+        console.log('✅ User registered successfully:', displayName);
+      }
       return credential.user;
     } catch (error: any) {
       console.error('❌ Registration error:', error.message);
@@ -61,10 +63,14 @@ export const authService = {
   // Login user
   async login(email: string, password: string): Promise<User> {
     try {
-      console.log('🔐 Attempting login for:', email);
+      if (import.meta.env.DEV) {
+        console.log('🔐 Attempting login for:', email);
+      }
       const credential = await signInWithEmailAndPassword(auth, email, password);
 
-      console.log('✅ Firebase authentication successful');
+      if (import.meta.env.DEV) {
+        console.log('✅ Firebase authentication successful');
+      }
       
       // Update last login time
       await setDoc(
@@ -85,7 +91,9 @@ export const authService = {
   async logout(): Promise<void> {
     try {
       await signOut(auth);
-      console.log('✅ User logged out successfully');
+      if (import.meta.env.DEV) {
+        console.log('✅ User logged out successfully');
+      }
     } catch (error: any) {
       console.error('❌ Logout error:', error.message);
       throw error;
@@ -96,7 +104,9 @@ export const authService = {
   async resetPassword(email: string): Promise<void> {
     try {
       await sendPasswordResetEmail(auth, email);
-      console.log('✅ Password reset email sent to:', email);
+      if (import.meta.env.DEV) {
+        console.log('✅ Password reset email sent');
+      }
     } catch (error: any) {
       console.error('❌ Password reset error:', error.message);
       throw error;

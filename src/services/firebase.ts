@@ -3,6 +3,27 @@ import { getAuth } from 'firebase/auth';
 import { getFirestore, enableIndexedDbPersistence } from 'firebase/firestore';
 import { getAnalytics } from 'firebase/analytics';
 
+// Validate environment variables
+const requiredEnvVars = [
+  'VITE_FIREBASE_API_KEY',
+  'VITE_FIREBASE_AUTH_DOMAIN',
+  'VITE_FIREBASE_PROJECT_ID',
+  'VITE_FIREBASE_STORAGE_BUCKET',
+  'VITE_FIREBASE_MESSAGING_SENDER_ID',
+  'VITE_FIREBASE_APP_ID',
+] as const;
+
+const missingVars = requiredEnvVars.filter(
+  (varName) => !import.meta.env[varName]
+);
+
+if (missingVars.length > 0) {
+  throw new Error(
+    `Missing required environment variables: ${missingVars.join(', ')}\n` +
+    'Please check your .env file and ensure all Firebase configuration variables are set.'
+  );
+}
+
 const firebaseConfig = {
   apiKey: import.meta.env.VITE_FIREBASE_API_KEY,
   authDomain: import.meta.env.VITE_FIREBASE_AUTH_DOMAIN,
@@ -30,7 +51,10 @@ enableIndexedDbPersistence(db).catch((err) => {
   }
 });
 
-console.log('🔥 Firebase initialized successfully!');
-console.log('📊 Project ID:', firebaseConfig.projectId);
+// Only log in development
+if (import.meta.env.DEV) {
+  console.log('🔥 Firebase initialized successfully!');
+  console.log('📊 Project ID:', firebaseConfig.projectId);
+}
 
 export default app;

@@ -1,6 +1,12 @@
 import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../hooks/useAuth';
+import { 
+  validatePassword, 
+  validateDisplayName, 
+  isValidEmail,
+  sanitizeInput 
+} from '../utils/validation';
 
 export function Register() {
   const [displayName, setDisplayName] = useState('');
@@ -12,30 +18,48 @@ export function Register() {
   const { register } = useAuth();
   const navigate = useNavigate();
 
+  const handlePasswordChange = (value: string) => {
+    setPassword(value);
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLocalError(null);
 
-    // Validation
+    // Sanitize inputs
+    const sanitizedName = sanitizeInput(displayName);
+    const sanitizedEmail = email.trim().toLowerCase();
+
+    // Validate display name
+    const nameValidation = validateDisplayName(sanitizedName);
+    if (!nameValidation.isValid) {
+      setLocalError(nameValidation.error || 'Invalid name');
+      return;
+    }
+
+    // Validate email
+    if (!isValidEmail(sanitizedEmail)) {
+      setLocalError('Please enter a valid email address');
+      return;
+    }
+
+    // Validate password
+    const passwordValidation = validatePassword(password);
+    if (!passwordValidation.isValid) {
+      setLocalError(passwordValidation.errors[0]);
+      return;
+    }
+
+    // Check password confirmation
     if (password !== confirmPassword) {
       setLocalError('Passwords do not match');
-      return;
-    }
-
-    if (password.length < 6) {
-      setLocalError('Password must be at least 6 characters');
-      return;
-    }
-
-    if (displayName.trim().length < 2) {
-      setLocalError('Please enter your full name');
       return;
     }
 
     setIsLoading(true);
 
     try {
-      await register(email, password, displayName);
+      await register(sanitizedEmail, password, sanitizedName);
       navigate('/dashboard');
     } catch (err: any) {
       setLocalError(err.message);
@@ -120,11 +144,30 @@ export function Register() {
                 autoComplete="new-password"
                 required
                 value={password}
-                onChange={(e) => setPassword(e.target.value)}
+                onChange={(e) => handlePasswordChange(e.target.value)}
                 className="appearance-none block w-full px-4 py-3 border border-gray-300 rounded-lg text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition"
                 placeholder="••••••••"
               />
-              <p className="mt-1 text-xs text-gray-500">Must be at least 6 characters</p>
+              <div className="mt-2 space-y-1">
+                <p className="text-xs text-gray-600 font-medium">Password must contain:</p>
+                <ul className="text-xs space-y-1">
+                  <li className={password.length >= 8 ? 'text-green-600' : 'text-gray-500'}>
+                    ✓ At least 8 characters
+                  </li>
+                  <li className={/[A-Z]/.test(password) ? 'text-green-600' : 'text-gray-500'}>
+                    ✓ One uppercase letter
+                  </li>
+                  <li className={/[a-z]/.test(password) ? 'text-green-600' : 'text-gray-500'}>
+                    ✓ One lowercase letter
+                  </li>
+                  <li className={/\d/.test(password) ? 'text-green-600' : 'text-gray-500'}>
+                    ✓ One number
+                  </li>
+                  <li className={/[@$!%*?&#]/.test(password) ? 'text-green-600' : 'text-gray-500'}>
+                    ✓ One special character (@$!%*?&#)
+                  </li>
+                </ul>
+              </div>
             </div>
 
             <div>

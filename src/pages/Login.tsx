@@ -5,6 +5,7 @@ import { db, auth } from '../services/firebase';
 import { otpService } from '../services/otp';
 import { OTPModal } from '../components/OTPModal';
 import { signOut } from 'firebase/auth';
+import { loginRateLimiter, isValidEmail } from '../utils/validation';
 
 export function Login() {
   const [email, setEmail] = useState('');
@@ -35,9 +36,25 @@ export function Login() {
     setIsLoading(true);
     setLocalError(null);
 
+    // Validate email format
+    const sanitizedEmail = email.trim().toLowerCase();
+    if (!isValidEmail(sanitizedEmail)) {
+      setLocalError('Please enter a valid email address');
+      setIsLoading(false);
+      return;
+    }
+
+    // Check rate limiting
+    if (!loginRateLimiter.isAllowed(sanitizedEmail)) {
+      const remaining = loginRateLimiter.getRemainingAttempts(sanitizedEmail);
+      setLocalError('Too many login attempts. Please try again in 15 minutes.');
+      setIsLoading(false);
+      return;
+    }
+
     try {
       // Step 1: Login with email/password
-      await login(email, password);
+      await login(sanitizedEmail, password);
       
       // Step 2: Check if user has 2FA enabled
       const user = auth.currentUser;
@@ -48,7 +65,7 @@ export function Login() {
           // Generate and send OTP
           const otp = otpService.generateOTP();
           await otpService.storeOTP(user.uid, otp);
-          await otpService.sendOTPEmail(email, otp);
+          await otpService.sendOTPEmail(sanitizedEmail, otp);
           
           // Store user ID and show OTP modal
           setPendingUserId(user.uid);
@@ -59,6 +76,9 @@ export function Login() {
           return;
         }
       }
+      
+      // Reset rate limiter on successful login
+      loginRateLimiter.reset(sanitizedEmail);
       
       // If no 2FA, proceed to dashboard
       navigate('/dashboard');

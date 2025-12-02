@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { authService } from '../services/auth';
+import { passwordResetRateLimiter, isValidEmail } from '../utils/validation';
 
 export function ForgotPassword() {
   const [email, setEmail] = useState('');
@@ -14,8 +15,23 @@ export function ForgotPassword() {
     setError(null);
     setSuccess(false);
 
+    // Validate email
+    const sanitizedEmail = email.trim().toLowerCase();
+    if (!isValidEmail(sanitizedEmail)) {
+      setError('Please enter a valid email address');
+      setIsLoading(false);
+      return;
+    }
+
+    // Check rate limiting
+    if (!passwordResetRateLimiter.isAllowed(sanitizedEmail)) {
+      setError('Too many password reset attempts. Please try again in 1 hour.');
+      setIsLoading(false);
+      return;
+    }
+
     try {
-      await authService.resetPassword(email);
+      await authService.resetPassword(sanitizedEmail);
       setSuccess(true);
       setEmail('');
     } catch (err: any) {
