@@ -35,9 +35,7 @@ build
 .cache
 
 # Firebase
-.firebase
-.firebaserc
+.firebase/
 firebase-debug.log
 firestore-debug.log
 ui-debug.log
-.firebase/
